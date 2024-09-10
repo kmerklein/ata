@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="pt-br" class="theme-light">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@1.0.2/css/bulma.min.css">
+    <title>Eleições 2024 - Preparação das Urnas</title>
+    <style type="text/css">
+        @media print {
+            .noPrint {
+                display: none;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app" class="mx-4">
+        
+        <!-- Bloco relativo ao CABEÇALHO DA ATA -->
+        <section class="section">
+            <div class="container has-text-centered" style="margin-top: -1.5rem;">
+                <div class="is-flex is-justify-content-center">
+                    <figure class="image is-64x64">
+                        <img src="https://adm.justicaeleitoral.jus.br/imagens/imagens/brasao_pb/@@display-file/image/brasao_pb.jpg" alt="Brasão da República"/>
+                    </figure>
+                </div>
+                <p class="is-size-7">
+                    PODER JUDICIÁRIO
+                </p>
+                <p class="is-size-7">
+                    TRIBUNAL REGIONAL ELEITORAL DO AMAZONAS
+                </p>
+                <p class="is-size-7">
+                    ELEIÇÕES MUNICIPAIS 2024 - {{ turno }}
+                </p><br>
+                <p class="title is-6 mb-2">
+                    {{ titulo }}
+                </p>
+                <p class="is-size-7">Resolução TSE nº 23.736, de 27 de fevereiro de 2024</p>
+                <p></p>
+            </div>
+        </section>
+
+        <section class="section pt-0">
+            <div class="container">
+
+                <!-- Bloco relativo às CONFIGURAÇÕES INICIAIS - NÃO APARECE NA IMPRESSÃO -->
+                <div class="container">
+                    <div class="noPrint">
+                        <div class="columns box my-2">
+                            <div class="column is-one-fifth">
+                                <span class="tag has-background-info-light is-medium">Turno</span>
+                                <div class="control">
+                                    <label class="radio has-text-danger-50">
+                                        <input type="radio" name="turno" @click="turno1()" checked> 1º Turno
+                                    </label>
+                                </div>
+                                <div class="control">
+                                    <label class="radio has-text-danger-50">
+                                        <input type="radio" name="turno" @click="turno2()"> 2º Turno
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="column">
+                                <span class="tag has-background-info-light is-medium">Zona Eleitoral</span>
+                                <div class="field pt-1">
+                                    <div class="control">
+                                        <div class="select is-small" :class="{'is-loading': loading }">
+                                            <select v-model="idZonaSelecionada" @change="carregaDadosZona">
+                                                <option value="">Selecione uma Zona</option>
+                                                <option v-for="zone in zones" :key="zone['id']" :value="zone['id']">
+                                                    {{ zone['ze_mun'] }}
+                                                </option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="column">
+                                <span class="tag has-background-info-light is-medium">Tipo de Cerimônia</span>
+                                <div class="control">
+                                    <label class="radio has-text-danger-50">
+                                        <input type="radio" name="tipo_ata" @click="ataGM()"> Apenas geração das
+                                        mídias
+                                    </label>
+                                </div>
+                                <div class="control">
+                                    <label class="radio has-text-danger-50">
+                                        <input type="radio" name="tipo_ata" @click="ataCG()"> Apenas preparação
+                                        de urnas
+                                    </label>
+                                </div>
+                                <div class="control">
+                                    <label class="radio has-text-danger-50">
+                                        <input type="radio" name="tipo_ata" @click="ataGM_CG()" checked> Ambas (ato
+                                        contínuo)
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="column">
+                                <span class="tag has-background-danger-light is-medium">Instruções para impressão</span>
+                                <div class="content">
+                                    <ul class="is-size-7">
+                                      <li>Usar preferencialmente o <span class="has-text-weight-bold">Chrome</span></li>
+                                      <li>Configurar papel "<span class="has-text-weight-bold">A4</span>"</li>
+                                      <li>Configurar margens "<span class="has-text-weight-bold">mínima</span>"</li>
+                                      <li>Configurar escala "<span class="has-text-weight-bold">85</span>"</li>
+                                      <li>Deixar marcado "<span class="has-text-weight-bold">Cabeçalhos e rodapés</span>"</li>
+                                      <li>Deixar marcado "<span class="has-text-weight-bold">Gráficos de segundo plano</span>"</li>
+                                    </ul>
+                                  </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bloco relativo à IDENTIFICAÇÃO DO MUNICÍPIO E ZONA-->
+                <div class="container">
+                    <div class="columns">
+                        <div class="column is-two-thirds">
+                            <div class="field">
+                                <label class="label is-small">Município</label>
+                                <div class="control">
+                                    <input class="input is-small is-uppercase" type="text" placeholder="Nome do município" v-model="municipio">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="column">
+                            <div class="field">
+                                <label class="label is-small">Zona</label>
+                                <div class="control">
+                                    <input class="input is-small is-uppercase" type="text" placeholder="Número da zona" v-model="zona">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <br>
+                
+                <!-- Bloco relativo à GERAÇÃO DAS MÍDIAS -->
+                <div class="container mt-4" v-show="gm">
+                    <div>
+                        <p class="title mt-5 p-1 is-6 has-text-centered has-background-grey-lighter">
+                            GERAÇÃO DAS MÍDIAS
+                        </p>
+                    </div>
+                    <div class="columns">
+                        <div class="column is-three-fifths">
+                            <div class="field">
+                                <label class="label is-small">Local</label>
+                                <div class="control">
+                                    <input class="input is-small is-uppercase" type="text" placeholder="Local de geração de mídias" v-model="local">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="column">
+                            <div class="field">
+                                <label class="label is-small">Data</label>
+                                <div class="control">
+                                    <input class="input is-small is-uppercase" type="text" placeholder="dd/mm/aaaa" v-model="data_gm">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="column">
+                            <div class="field">
+                                <label class="label is-small">Início</label>
+                                <div class="control">
+                                    <input class="input is-small is-uppercase" type="text" placeholder="hh:mm" v-model="inicio_gm">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="column">
+                            <div class="field">
+                                <label class="label is-small">Término</label>
+                                <div class="control">
+                                    <input class="input is-small is-uppercase" type="text" placeholder="hh:mm" v-model="fim_gm">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="columns">
+                        <div class="column pt-0 pb-0">
+                            <div class="field">
+                                <label class="label is-small">Mídias de carga</label>
+                                <div class="control">
+                                    <input class="input is-small is-uppercase" type="text" placeholder="Qtd" v-model="ma_carga">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="column pt-0 pb-0">
+                            <div class="field">
+                                <label class="label is-small">Mídias de carga 100% (conting.)</label>
+                                <div class="control">
+                                    <input class="input is-small is-uppercase" type="text" placeholder="Qtd" v-model="ma_carga_full">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="column pt-0 pb-0">
+                            <div class="field">
+                                <label class="label is-small">Mídias de votação</label>
+                                <div class="control">
+                                    <input class="input is-small is-uppercase" type="text" placeholder="Qtd" v-model="ma_vota">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="column pt-0 pb-0">
+                            <div class="field">
+                                <label class="label is-small">Mídias de resultado</label>
+                                <div class="control">
+                                    <input class="input is-small is-uppercase" type="text" placeholder="Qtd" v-model="mr_secao">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="columns">
+                        <div class="column pb-0">
+                            <div class="field">
+                                <label class="label is-small">Mídias de votação (conting.)</label>
+                                <div class="control">
+                                    <input class="input is-small is-uppercase" type="text" placeholder="Qtd" v-model="ma_vota_cont">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="column pb-0">
+                            <div class="field">
+                                <label class="label is-small">Mídias multi (SA, RED, VPP e ATUE)</label>
+                                <div class="control">
+                                    <input class="input is-small is-uppercase" type="text" placeholder="Qtd" v-model="mr_multi">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="column pb-0">
+                            <div class="field">
+                                <label class="label is-small">Mídias AVPART</label>
+                                <div class="control">
+                                    <input class="input is-small is-uppercase" type="text" placeholder="Qtd" v-model="mr_avpart">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="column pb-0">
+                            <div class="field">
+                                <label class="label is-small">Mídias ADH</label>
+                                <div class="control">
+                                    <input class="input is-small is-uppercase" type="text" placeholder="Qtd" v-model="mr_adh">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <br>
+
+                <!-- Bloco relativo à PREPARAÇÃO DAS URNAS -->
+                <div class="container mt-4" v-show="carga">
+                    <div>
+                        <p class="title mt-5 p-1 is-6 has-text-centered has-background-grey-lighter">
+                            PREPARAÇÃO DAS URNAS
+                        </p>
+                    </div>
+                    <div class="columns">
+                        <div class="column is-three-fifths">
+                            <div class="field">
+                                <label class="label is-small">Local</label>
+                                <div class="control">
+                                    <input class="input is-small is-uppercase" type="text" placeholder="Local de preparação das urnas" v-model="local">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="column">
+                            <div class="field">
+                                <label class="label is-small">Data</label>
+                                <div class="control">
+                                    <input class="input is-small is-uppercase" type="text" placeholder="dd/mm/aaaa" v-model="data_carga">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="column">
+                            <div class="field">
+                                <label class="label is-small">Início</label>
+                                <div class="control">
+                                    <input class="input is-small is-uppercase" type="text" placeholder="hh:mm" v-model="inicio_carga">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="column">
+                            <div class="field">
+                                <label class="label is-small">Término</label>
+                                <div class="control">
+                                    <input class="input is-small is-uppercase" type="text" placeholder="hh:mm" v-model="fim_carga">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="columns">
+                        <div class="column pt-0 pb-0">
+                            <div class="field">
+                                <label class="label is-small">Urnas de seção</label>
+                                <div class="control">
+                                    <input class="input is-small is-uppercase" type="text" placeholder="Qtd" v-model="ue_secao">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="column pt-0 pb-0">
+                            <div class="field">
+                                <label class="label is-small">Urnas de contingência</label>
+                                <div class="control">
+                                    <input class="input is-small is-uppercase" type="text" placeholder="Qtd" v-model="ue_cont">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="column pt-0 pb-0">
+                            <div class="field">
+                                <label class="label is-small">Urnas verificadas com AVPART</label>
+                                <div class="control">
+                                    <input class="input is-small is-uppercase" type="text" placeholder="Qtd" v-model="audit_avpart">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="column pt-0 pb-0">
+                            <div class="field">
+                                <label class="label is-small">Demonstração da votação</label>
+                                <div class="control">
+                                    <input class="input is-small is-uppercase" type="text" placeholder="Qtd: 00 / seções: 000, 000,..." v-model="demo_vot">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="columns">
+                        <div class="column pb-0">
+                            <div class="field">
+                                <label class="label is-small">Mídias de votação (conting.)</label>
+                                <div class="control">
+                                    <input class="input is-small is-uppercase" type="text" placeholder="Qtd" v-model="ma_vota_cont">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="column pb-0">
+                            <div class="field">
+                                <label class="label is-small">Mídias regeradas</label>
+                                <div class="control">
+                                    <input class="input is-small is-uppercase" type="text" placeholder="Qtd / Tipo">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="column pb-0">
+                            <div class="field">
+                                <label class="label is-small">Mídias defeituosas (lacrar)</label>
+                                <div class="control">
+                                    <input class="input is-small is-uppercase" type="text"
+                                    placeholder="Qtd Carga / Qtd Votação">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="column pb-0">
+                            <div class="field">
+                                <label class="label is-small">Urnas de lona lacradas</label>
+                                <div class="control">
+                                    <input class="input is-small is-uppercase" type="text" placeholder="Qtd" v-model="ue_lona">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <br>
+
+                <!-- Bloco relativo às INFORMAÇÕES ADICIONAIS -->
+                <div class="container mt-4">
+                    <div>
+                        <p class="title mt-5 p-1 is-6 has-text-centered has-background-grey-lighter">
+                            INFORMAÇÕES ADICIONAIS
+                        </p>
+                    </div>
+                    <br>
+                    <div class="columns">
+                        <div class="column">
+                            <div v-show="check_gm">
+                                <label class="checkbox is-size-7">
+                                    <input type="checkbox" checked>
+                                    As mídias de carga geradas foram acondicionadas em Envelopes de Segurança, lacrados e assinados ao final da cerimônia.
+                                </label>
+                            </div>
+                            <div v-show="check_cg">
+                                <label class="checkbox is-size-7">
+                                    <input type="checkbox" checked>
+                                    Os extratos de carga e os comprovantes de carga foram devidamente assinados pelos(as) técnicos(as) responsáveis.
+                                </label><br>
+                                <label class="checkbox is-size-7">
+                                    <input type="checkbox">
+                                    Houve ocorrência de substituição de lacres. Se sim, descrever o ocorrido.
+                                </label><br>
+                                <label class="checkboxis is-size-7">
+                                    <input type="checkbox" checked>
+                                    Os lacres não assinados foram acondicionados em envelope lacrado e assinado
+                                    pelos(as) presentes.
+                                </label>
+                                <label class="checkbox is-size-7">
+                                    <input type="checkbox" checked>
+                                    As mídias de votação para contingência foram acondicionadas em Envelopes de Segurança, lacrados e assinados ao final da cerimônia.
+                                </label><br>
+                                <label class="checkbox is-size-7">
+                                    <input type="checkbox" checked>
+                                    As correspondências das seções foram transmitidas ao TSE.
+                                </label><br>
+                                <label class="checkbox is-size-7">
+                                    <input type="checkbox" checked>
+                                    As mídias de carga utilizadas foram acondicionadas em Envelopes de Segurança, lacrados e assinados após a tranmissão das correspondências.
+                                </label><br>
+                            </div>
+                            <div v-show="check_gm_cg">
+                                <label class="checkbox is-size-7">
+                                    <input type="checkbox" checked>
+                                    Os extratos de carga e os comprovantes de carga foram devidamente assinados pelos(as) técnicos(as) responsáveis.
+                                </label><br>
+                                <label class="checkbox is-size-7">
+                                    <input type="checkbox">
+                                    Houve ocorrência de substituição de lacres. Se sim, descrever o ocorrido.
+                                </label><br>
+                                <label class="checkbox is-size-7">
+                                    <input type="checkbox" checked>
+                                    Os lacres não assinados foram acondicionados em envelope lacrado e assinado pelos(as) presentes.
+                                </label><br>
+                                <label class="checkbox is-size-7">
+                                    <input type="checkbox" checked>
+                                    As correspondências das seções foram transmitidas ao TSE.
+                                </label><br>
+                                <label class="checkbox is-size-7">
+                                    <input type="checkbox" checked>
+                                    As mídias de carga utilizadas foram acondicionadas em Envelopes de Segurança, lacrados e assinados após a tranmissão das correspondências.
+                                </label><br>
+                            </div>
+                            <div class="field mt-2">
+                                <label class="label is-small">Outras informações</label>
+                                <div class="control">
+                                    <textarea class="textarea is-size-8"
+                                        placeholder="Consignar aqui outras informações que julgar importante"
+                                        rows="7"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <br>
+                
+                <!-- Bloco relativo às PESSOAS PRESENTES -->
+                <div class="container mt-4 pt-2">
+                    <div class="mt-6">
+                        <p class="title mt-5 p-1 is-6 has-text-centered has-background-grey-lighter">
+                            NOME E QUALIFICAÇÃO DOS PRESENTES
+                        </p>
+                    </div>
+                    <div class="columns">
+                        <div class="column pb-0">
+                            <div class="field">
+                                <label class="label is-small">Nome / Assinatura</label>
+                                <div class="control">
+                                    <input class="input is-small is-uppercase" type="text" v-model="juiz">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="column is-half pb-0">
+                            <div class="field">
+                                <label class="label is-small">Qualificação</label>
+                                <div class="control">
+                                    <input class="input is-small is-uppercase" type="text" v-model="cargo_juiz">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="columns">
+                        <div class="column pb-0">
+                            <div class="field">
+                                <div class="control">
+                                    <input class="input is-small is-uppercase" type="text" v-model="presente_1">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="column is-half pb-0">
+                            <div class="field">
+                                <div class="control">
+                                    <input class="input is-small is-uppercase" type="text" v-model="cargo_presente_1">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="columns">
+                        <div class="column pb-0">
+                            <div class="field">
+                                <div class="control">
+                                    <input class="input is-small is-uppercase" type="text" v-model="presente_2">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="column is-half pb-0">
+                            <div class="field">
+                                <div class="control">
+                                    <input class="input is-small is-uppercase" type="text" v-model="cargo_presente_2">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="columns">
+                        <div class="column pb-0">
+                            <div class="field">
+                                <div class="control">
+                                    <input class="input is-small is-uppercase" type="text">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="column is-half pb-0">
+                            <div class="field">
+                                <div class="control">
+                                    <input class="input is-small is-uppercase" type="text">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="columns">
+                        <div class="column pb-0">
+                            <div class="field">
+                                <div class="control">
+                                    <input class="input is-small is-uppercase" type="text">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="column is-half pb-0">
+                            <div class="field">
+                                <div class="control">
+                                    <input class="input is-small is-uppercase" type="text">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="columns">
+                        <div class="column pb-0">
+                            <div class="field">
+                                <div class="control">
+                                    <input class="input is-small is-uppercase" type="text">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="column is-half pb-0">
+                            <div class="field">
+                                <div class="control">
+                                    <input class="input is-small is-uppercase" type="text">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="columns">
+                        <div class="column pb-0">
+                            <div class="field">
+                                <div class="control">
+                                    <input class="input is-small is-uppercase" type="text">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="column is-half pb-0">
+                            <div class="field">
+                                <div class="control">
+                                    <input class="input is-small is-uppercase" type="text">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="columns">
+                        <div class="column pb-0">
+                            <div class="field">
+                                <div class="control">
+                                    <input class="input is-small is-uppercase" type="text">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="column is-half pb-0">
+                            <div class="field">
+                                <div class="control">
+                                    <input class="input is-small is-uppercase" type="text">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="columns">
+                        <div class="column pb-0">
+                            <div class="field">
+                                <div class="control">
+                                    <input class="input is-small is-uppercase" type="text">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="column is-half pb-0">
+                            <div class="field">
+                                <div class="control">
+                                    <input class="input is-small is-uppercase" type="text">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="columns">
+                        <div class="column pb-0">
+                            <div class="field">
+                                <div class="control">
+                                    <input class="input is-small is-uppercase" type="text">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="column is-half pb-0">
+                            <div class="field">
+                                <div class="control">
+                                    <input class="input is-small is-uppercase" type="text">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <br>
+
+                <!-- Bloco relativo aos ANEXOS-->
+                <div class="container mt-4">
+                    <div>
+                        <p class="title mt-5 p-1 is-6 has-text-centered has-background-grey-lighter">
+                            ANEXOS
+                        </p>
+                    </div>
+                    <!-- ANEXOS do 1º turno - apenas geração de mídias -->
+                    <div v-show="anexos_gm_1T">
+                        <p class="is-size-8"><span class="has-text-weight-bold">ANEXO I</span> - Identificação e versão dos sistemas
+                            utilizados - Relatório do GEDAI-UE
+                        </p>
+                        <p class="is-size-8"><span class="has-text-weight-bold">ANEXO II</span> - Envelopes de Segurança Utilizados
+                        </p>
+                        <p class="is-size-8"><span class="has-text-weight-bold">ANEXO III</span> - Lista de presença,
+                            <span class="is-underlined">se houver</span>
+                        </p>
+                    </div>
+                    <!-- ANEXOS do 1º turno - apenas carga -->
+                    <div v-show="anexos_cg_1T">
+                        <p class="is-size-8"><span class="has-text-weight-bold">ANEXO I</span> - Identificação e versão dos sistemas
+                            utilizados - Relatório do GEDAI-UE
+                        </p>
+                        <p class="is-size-8"><span class="has-text-weight-bold">ANEXO II</span> - Extratos de carga
+                        </p>
+                        <p class="is-size-8"><span class="has-text-weight-bold">ANEXO III</span> - Relatórios dos
+                            procedimentos de verificação de integridade e autenticidade (AVPART)
+                        </p>
+                        <p class="is-size-8"><span class="has-text-weight-bold">ANEXO IV</span> - Relatórios dos
+                            procedimentos de demonstração de votação
+                        </p>
+                        <p class="is-size-8"><span class="has-text-weight-bold">ANEXO V</span> - Etiquetas dos Lacres
+                            assinados e não utilizados, <span class="is-underlined">se houver</span>
+                        </p>
+                        <p class="is-size-8"><span class="has-text-weight-bold">ANEXO VI</span> - Extratos de carga de
+                            urnas com defeito, <span class="is-underlined">se houver</span>
+                        </p>
+                        <p class="is-size-8"><span class="has-text-weight-bold">ANEXO VII</span> - Envelopes de Segurança Utilizados
+                        </p>
+                        <p class="is-size-8"><span class="has-text-weight-bold">ANEXO VIII</span> - Lista de presença,
+                            <span class="is-underlined">se houver</span>
+                        </p>
+                    </div>
+                    <!-- ANEXOS do 1º turno - ato contínuo -->
+                    <div v-show="anexos_gm_cg_1T">
+                        <p class="is-size-8"><span class="has-text-weight-bold">ANEXO I</span> - Identificação e versão dos sistemas
+                            utilizados - Relatório do GEDAI-UE
+                        </p>
+                        <p class="is-size-8"><span class="has-text-weight-bold">ANEXO II</span> - Extratos de carga
+                        </p>
+                        <p class="is-size-8"><span class="has-text-weight-bold">ANEXO III</span> - Relatórios dos
+                            procedimentos de verificação de integridade e autenticidade (AVPART)
+                        </p>
+                        <p class="is-size-8"><span class="has-text-weight-bold">ANEXO IV</span> - Relatórios dos
+                            procedimentos de demonstração de votação
+                        </p>
+                        <p class="is-size-8"><span class="has-text-weight-bold">ANEXO V</span> - Etiquetas dos Lacres
+                            assinados e não utilizados, <span class="is-underlined">se houver</span>
+                        </p>
+                        <p class="is-size-8"><span class="has-text-weight-bold">ANEXO VI</span> - Extratos de carga de
+                            urnas com defeito, <span class="is-underlined">se houver</span>
+                        </p>
+                        <p class="is-size-8"><span class="has-text-weight-bold">ANEXO VII</span> - Envelopes de Segurança Utilizados
+                        </p>
+                        <p class="is-size-8"><span class="has-text-weight-bold">ANEXO VIII</span> - Lista de presença,
+                            <span class="is-underlined">se houver</span>
+                        </p>
+                        <!-- <p class="is-size-8"><span class="has-text-weight-bold">ANEXO VIII</span> - Etiquetas
+                            identificadoras dos conjuntos de lacres utilizados na preparação das urnas - 2º turno
+                        </p>
+                        <p class="is-size-8"><span class="has-text-weight-bold">ANEXO IX</span> - Lacres de 1º turno
+                            substituídos para o 2º turno, <span class="is-underlined">se houver</span>
+                        </p> -->
+                    </div>
+
+                    <div class="content noPrint has-text-centered">
+                        <button class="button is-primary" onclick="print()">Imprimir</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+    <script>
+        const app = Vue.createApp({
+            data() {
+                return {
+                    titulo: "ATA DA CERIMÔNIA DE GERAÇÃO DAS MÍDIAS E PREPARAÇÃO DAS URNAS",
+                    turno: "1º TURNO",
+                    turnoSelecionado: "1", // Começa com 1º turno selecionado
+                    loading: true,
+                    gm: true,
+                    carga: true,
+                    check_gm: false,
+                    check_cg: false,
+                    check_gm_cg: true,
+                    anexos_gm_1T: false,
+                    anexos_cg_1T: false,
+                    anexos_gm_cg_1T: true,
+                    anexos_gm_2T: false,
+                    anexos_cg_2T: false,
+                    anexos_gm_cg_2T: false,
+                    todasZonas: [], // Armazena todas as zonas antes de filtrar
+                    zones: [], // Armazena as zonas filtradas
+                    idZonaSelecionada: '', // Armazena a chave única para o select de zona
+                    selectedZone: {}, // Armazena os dados da zona selecionada
+                    municipio: '',
+                    zona: '',
+                    local: '',
+                    data_gm: '',
+                    inicio_gm: '',
+                    fim_gm: '',
+                    data_carga: '',
+                    inicio_carga: '',
+                    fim_carga: '',
+                    ue_secao: '',
+                    ue_cont: '',
+                    ma_carga: '',
+                    ma_carga_full: '',
+                    ma_vota: '',
+                    ma_vota_cont: '',
+                    mr_secao: '',
+                    mr_multi: '',
+                    mr_avpart: '',
+                    audit_avpart: '',
+                    mr_adh: '',
+                    demo_vot: '',
+                    ue_lona: '',
+                    juiz: '',
+                    cargo_juiz: '',
+                    presente_1: '',
+                    cargo_presente_1: '',
+                    presente_2: '',
+                    cargo_presente_2: ''
+                };
+            },
+            methods: {
+                filtraZonasPorTurno() {
+                    console.log("Turno atual:", this.turnoSelecionado);
+                    this.zones = this.todasZonas.filter(zone => zone.turno == this.turnoSelecionado);
+                },
+                turno1() {
+                    this.resetForm(); // Limpa todos os campos
+                    this.idZonaSelecionada = ''; // Reseta a seleção do select de zona
+                    console.log("1º Turno selecionado");
+                    this.anexos_gm_2T = false; // Desabilita a apresentação dos anexos do 2º turno
+                    this.anexos_cg_2T = false; // Desabilita a apresentação dos anexos do 2º turno
+                    this.anexos_gm_cg_2T = false; // Desabilita a apresentação dos anexos do 2º turno
+                    this.turno = "1º TURNO";
+                    this.turnoSelecionado = "1"; // Define o turno como 1
+                    this.filtraZonasPorTurno(); // Atualiza as opções do select de zona
+                },
+                turno2() {
+                    this.resetForm(); // Limpa todos os campos
+                    this.idZonaSelecionada = ''; // Reseta a seleção do select de zona
+                    console.log("2º Turno selecionado");
+                    this.anexos_2T = true; // Habilita a apresentação dos anexos do 2º turno
+                    this.turno = "2º TURNO";
+                    this.turnoSelecionado = "2"; // Define o turno como 2
+                    this.filtraZonasPorTurno(); // Atualiza as opções do select de zona
+                },
+                ataGM() {
+                    console.log("Tipo de cerimônia selecionada: Apenas geração de mídias");
+                    this.titulo = "ATA DA CERIMÔNIA DE GERAÇÃO DAS MÍDIAS";
+                    this.gm = true;
+                    this.carga = false;
+                    this.check_gm = true;
+                    this.check_cg = false;
+                    this.check_gm_cg = false;
+                    this.anexos_gm_1T = true;
+                    this.anexos_cg_1T = false;
+                    this.anexos_gm_cg_1T = false;
+                },
+                ataCG() {
+                    console.log("Tipo de cerimônia selecionada: Apenas Preparação de urnas");
+                    this.titulo = "ATA DA CERIMÔNIA DE PREPARAÇÃO DAS URNAS";
+                    this.gm = false;
+                    this.carga = true;
+                    this.check_gm = false;
+                    this.check_cg = false;
+                    this.check_gm_cg = true;
+                    this.anexos_gm_1T = false;
+                    this.anexos_cg_1T = true;
+                    this.anexos_gm_cg_1T = false;
+                },
+                ataGM_CG() {
+                    console.log("Tipo de cerimônia selecionada: Ambas");
+                    this.titulo = "ATA DA CERIMÔNIA DE GERAÇÃO DAS MÍDIAS E PREPARAÇÃO DAS URNAS";
+                    this.gm = true;
+                    this.carga = true;
+                    this.anexos_gm_1T = false;
+                    this.anexos_cg_1T = false;
+                    this.anexos_gm_cg_1T = true;
+                },
+                resetForm() {
+                    this.municipio = '';
+                    this.zona = '';
+                    this.local = '';
+                    this.data_gm = '';
+                    this.inicio_gm = '';
+                    this.fim_gm = '';
+                    this.data_carga = '';
+                    this.inicio_carga = '';
+                    this.fim_carga = '';
+                    this.ue_secao = '';
+                    this.ue_cont = '';
+                    this.ma_carga = '';
+                    this.ma_carga_full = '';
+                    this.ma_vota = '';
+                    this.ma_vota_cont = '';
+                    this.mr_secao = '';
+                    this.mr_multi = '';
+                    this.mr_adh = '';
+                    this.mr_avpart = '';
+                    this.audit_avpart = '';
+                    this.demo_vot = '';
+                    this.ue_lona = '';
+                    this.juiz = '';
+                    this.cargo_juiz = '';
+                    this.presente_1 = '';
+                    this.presente_2 = '';
+                    this.cargo_presente_1 = '';
+                    this.cargo_presente_2 = '';
+                },
+                // Método para buscar os dados da planilha que vem por API JSON
+                fetchZonas() {
+                    this.loading = true;
+                    fetch('https://script.googleusercontent.com/macros/echo?user_content_key=U5eMUNamgJV6gM4afHJiUYXh9tpWSCotWDf7cfg_zUzq8XwjvaodhqwV5au3_t6MG4JIPIDHFneK2QPF_aHxu9FLoS0867qQm5_BxDlH2jW0nuo2oDemN9CCS2h10ox_1xSncGQajx_ryfhECjZEnFXWIV-YSQRg77bq4__ymJwd7akV2mmXqhM_ENakU1WuUkc15A8Nt5x3P42SIWxzYsuzopipgumMIlx4_LAD-n0plVRtLcgSY9z9Jw9Md8uu&lib=MYbkM_ptlTvLdFxZaqHz17P7iTRqXf-gi')
+                        .then(response => response.json())
+                        .then(data => {
+                            this.todasZonas = data; // Carrega os dados de todas as zonas
+                            this.filtraZonasPorTurno(); // Filtra com base no turno selecionado
+                            this.loading = false;
+                        })
+                        .catch(error => console.error('Erro ao carregar dados da API:', error));
+                        this.loading = false;
+                },
+                // Método para carregamento dos dados conforme a zona selecionada
+                carregaDadosZona() {
+                    const zone = this.zones.find(z => z['id'] === this.idZonaSelecionada);
+                    if (zone) {
+                        this.municipio = zone.mun || '';
+                        this.zona = zone.ze || '';
+                        this.local = zone.endereco_gm_carga || '';
+                        this.data_gm = zone.data_gm || '';
+                        this.inicio_gm = zone.inicio_gm || '';
+                        this.fim_gm = zone.fim_gm || '';
+                        this.data_carga = zone.data_carga || '';
+                        this.inicio_carga = zone.inicio_carga || '';
+                        this.fim_carga = zone.fim_carga || '';
+                        this.ue_secao = zone.ue_secao || '';
+                        this.ue_cont = zone.ue_cont || '';
+                        this.ma_carga = zone.ma_carga || '';
+                        this.ma_carga_full = zone.ma_carga_full || '';
+                        this.ma_vota = zone.ma_vota || '';
+                        this.ma_vota_cont = zone.ma_vota_cont || '';
+                        this.mr_secao = zone.mr_secao || '';
+                        this.mr_multi = zone.mr_multi || '';
+                        this.mr_adh = zone.mr_adh || '';
+                        this.mr_avpart = zone.mr_avpart || '';
+                        this.audit_avpart = zone.audit_avpart || '';
+                        this.demo_vot = zone.demo_vot || '';
+                        this.ue_lona = zone.ue_lona || '';
+                        this.juiz = zone.juiz || '';
+                        this.cargo_juiz = zone.cargo_juiz || '';
+                        this.presente_1 = zone.presente_1 || '';
+                        this.presente_2 = zone.presente_2 || '';
+                        this.cargo_presente_1 = zone.cargo_presente_1 || '';
+                        this.cargo_presente_2 = zone.cargo_presente_2 || '';
+                        console.log("Zona selecionada: ", zone['ze_mun']);
+                    } else {
+                        this.resetForm();
+                    }
+                }
+            },
+            mounted() {
+                this.fetchZonas();
+            }
+        }).mount('#app');
+    </script>
+
+</body>
+
+</html>
