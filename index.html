@@ -850,16 +850,22 @@
                     // Controle da exibição dos anexos
                     if (this.turnoSelecionado === "1" && this.tipoCerimonia === "gm") {
                         this.exibirAnexos = "anexos_gm_1T";
+                        this.titulo = "ATA DA CERIMÔNIA DE GERAÇÃO DAS MÍDIAS";
                     } else if (this.turnoSelecionado === "1" && this.tipoCerimonia === "carga") {
                         this.exibirAnexos = "anexos_cg_1T";
+                        this.titulo = "ATA DA CERIMÔNIA DE PREPARAÇÃO DAS URNAS";
                     } else if (this.turnoSelecionado === "1" && this.tipoCerimonia === "ambas") {
                         this.exibirAnexos = "anexos_gm_cg_1T";
+                        this.titulo = "ATA DA CERIMÔNIA DE GERAÇÃO DAS MÍDIAS E PREPARAÇÃO DAS URNAS";
                     } else if (this.turnoSelecionado === "2" && this.tipoCerimonia === "gm") {
                         this.exibirAnexos = "anexos_gm_2T";
+                        this.titulo = "ATA DA CERIMÔNIA DE GERAÇÃO DAS MÍDIAS";
                     } else if (this.turnoSelecionado === "2" && this.tipoCerimonia === "carga") {
                         this.exibirAnexos = "anexos_cg_2T";
+                        this.titulo = "ATA DA CERIMÔNIA DE PREPARAÇÃO DAS URNAS";
                     } else if (this.turnoSelecionado === "2" && this.tipoCerimonia === "ambas") {
                         this.exibirAnexos = "anexos_gm_cg_2T";
+                        this.titulo = "ATA DA CERIMÔNIA DE GERAÇÃO DAS MÍDIAS E PREPARAÇÃO DAS URNAS";
                     }
                 },
                 turno1() {
